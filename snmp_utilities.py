@@ -1,4 +1,4 @@
-## @namespace snmp_utilities
+## @file snmp_utilities.py
 # @brief SNMP Utility Classes
 # @author Ross A. Stewart
 # @copyright 2019-2020
