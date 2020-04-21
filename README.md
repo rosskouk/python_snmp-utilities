@@ -1,6 +1,13 @@
 ### Python SNMP Utilities
 
-Class which allows interaction with SNMP devices via pySNMP
+Classes which allows interaction with SNMP devices via pySNMP.  The module contains two classes
+
+  - SnmpQuery
+    - This class provides methods needed to perform raw SNMP queries on devices
+  - SnmpUtility
+    - This class provides methods which return standard information including:
+      - Device name (get_snmp_name())
+      - Interface statistics (get_snmp_interfaces())
 
 ### License
 
@@ -70,11 +77,11 @@ Return a dictionary of disk statistics from a Netgear ReadyNAS
 
 ```python
 
-from snmp_utilities import SnmpQuery
+from snmp_utilities import SnmpUtility
 
 host = 'readynas.example.com'
 community_string = 'public'
-snmp = SnmpQuery()
+snmp = SnmpUtility(host, community_string)
 
 disk_entries = snmp.get_next(host,
                              [
@@ -84,7 +91,7 @@ disk_entries = snmp.get_next(host,
                                  {'READYNASOS-MIB': 'diskTemperature'}
                              ], snmp.construct_credentials(False, community_string))
 
-print(snmp.get_snmp_name(host, community_string))  # Print the hostname
+print('Host: ' + snmp.get_snmp_name() + '\n')  # Print the hostname
 
 for disk_entry in disk_entries:
     # Iterate over dictionary of entries
