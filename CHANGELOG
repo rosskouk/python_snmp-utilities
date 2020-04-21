@@ -1,0 +1,35 @@
+v1.0.2
+======  
+  - 0ca459e 
+    - Updated README.md
+  - 35fd939 
+    - Updated documentation in snmp_utilities.py 
+    - Reordered methods in file
+  - 899359c 
+    - Removed e-mail address from LICENSE
+  - 41513d7 
+    - Updated .gitignore
+  - 79d00be 
+    - Added SnmpUtility to __init__.py
+  - 96101fc 
+    - Added class SnmpUtility 
+    - Added SnmpUtility::__init__() method 
+    - Moved methods get_snmp_name() and get_snmp_interfaces() to SnmpUtility
+  - 2e24117 - Minor documentation change
+
+v1.0.1
+======
+  - 2cbb421 Merge pull request #3 from rosskouk/bugfix-add-init
+    - 1470d0d 
+      - Added __init__.py
+
+v1.0.0
+======
+    - 4d2664a  Merge pull request #2 from rosskouk/enhancement-update-docs
+        - 5a21c29 
+          - Updated README.md
+        - 651bd1b Merge pull request #1 from rosskouk/release-v1.0.0
+        - e47ba64 
+            - Initial release
+        - 668459d 
+            - Initial commit
