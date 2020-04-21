@@ -260,24 +260,9 @@ class SnmpUtility(SnmpQuery):
         # @brief STRING - The hostname of the SNMP device
         self.host = host
 
-        ## @var host
+        ## @var community_string
         # @brief STRING - The SNMP community string set on the device
         self.community_string = community_string
-
-    def get_snmp_name(self):
-        """! @brief Get the name of an SNMP device
-
-        @param host STRING - The host name or IP address of the device
-        @param community_string STRING - The SNMP read only community string
-        @return STRING - The name of the device as defined by SNMPv2-MIB::sysName.0
-        """
-
-        host_name = self.get(self.host,
-                             [
-                                 {'SNMPv2-MIB': 'sysName.0'}
-                             ], self.construct_credentials(False, self.community_string))
-
-        return host_name[0]['SNMPv2-MIB::sysName.0']
 
     def get_snmp_interfaces(self):
         """! @brief Get interface statistics via SNMP
@@ -339,8 +324,7 @@ class SnmpUtility(SnmpQuery):
             fields = {}  # Define a blank dictionary to hold the fields
 
             # Store the hostname
-            fields['host'] = self.get_snmp_name(
-                self.host, self.community_string)
+            fields['host'] = self.get_snmp_name()
 
             for key, value in interface_entry.items():
                 # Iterate over measurement fields
@@ -350,3 +334,16 @@ class SnmpUtility(SnmpQuery):
             interface_stat_list.append(fields)
 
         return interface_stat_list  # Return out the gathered statistics
+
+    def get_snmp_name(self):
+        """! @brief Get the name of an SNMP device
+
+        @return STRING - The name of the device as defined by SNMPv2-MIB::sysName.0
+        """
+
+        host_name = self.get(self.host,
+                             [
+                                 {'SNMPv2-MIB': 'sysName.0'}
+                             ], self.construct_credentials(False, self.community_string))
+
+        return host_name[0]['SNMPv2-MIB::sysName.0']
