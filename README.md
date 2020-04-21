@@ -13,7 +13,7 @@ Classes which allows interaction with SNMP devices via pySNMP.  The module conta
 
 MIT License
 
-Copyright (c) 2020 Ross A. Stewart (rosskouk@gmail.com)
+Copyright (c) 2020 Ross A. Stewart
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
