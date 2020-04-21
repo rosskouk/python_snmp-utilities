@@ -236,7 +236,35 @@ class SnmpQuery:
 
         return self.fetch(handler)
 
-    def get_snmp_name(self, host, community_string):
+
+class SnmpUtility(SnmpQuery):
+    """! @brief SNMP utility class
+
+    @details
+
+    This class provides methods which gather standard information
+    from SNMP enabled devices.
+    """
+
+    def __init__(self, host, community_string):
+        """! @brief Constructor
+
+        @param host STRING - The hostname of the SNMP device
+        @param community_string STRING - The SNMP community string set on the device
+        @details
+
+        Sets required parameters
+        """
+
+        ## @var host
+        # @brief STRING - The hostname of the SNMP device
+        self.host = host
+
+        ## @var host
+        # @brief STRING - The SNMP community string set on the device
+        self.community_string = community_string
+
+    def get_snmp_name(self):
         """! @brief Get the name of an SNMP device
 
         @param host STRING - The host name or IP address of the device
@@ -244,9 +272,81 @@ class SnmpQuery:
         @return STRING - The name of the device as defined by SNMPv2-MIB::sysName.0
         """
 
-        host_name = self.get(host,
+        host_name = self.get(self.host,
                              [
                                  {'SNMPv2-MIB': 'sysName.0'}
-                             ], self.construct_credentials(False, community_string))
+                             ], self.construct_credentials(False, self.community_string))
 
         return host_name[0]['SNMPv2-MIB::sysName.0']
+
+    def get_snmp_interfaces(self):
+        """! @brief Get interface statistics via SNMP
+
+        @details
+
+        Gets statistics for network interfaces, the following fields
+        are returned:
+
+          - IF-MIB::ifIndex
+          - IF-MIB::ifName
+          - IF-MIB::ifType
+          - IF-MIB::ifAdminStatus
+          - IF-MIB::ifOperStatus
+          - IF-MIB::ifHCInOctets
+          - IF-MIB::ifHCInUcastPkts
+          - IF-MIB::ifHCInMulticastPkts
+          - IF-MIB::ifHCInBroadcastPkts
+          - IF-MIB::ifHCOutOctets
+          - IF-MIB::ifHCOutUcastPkts
+          - IF-MIB::ifHCOutMulticastPkts
+          - IF-MIB::ifHCOutBroadcastPkts
+          - IF-MIB::ifInDiscards
+          - IF-MIB::ifInErrors
+          - IF-MIB::ifInUnknownProtos
+          - IF-MIB::ifOutDiscards
+          - IF-MIB::ifOutErrors
+
+        The information is returned as a list of dictionaries
+        """
+
+        interface_stat_list = []  # Blank list to hold dictionaries of interface statistics
+
+        interface_entries = self.get_next(self.host,
+                                          [
+                                              {'IF-MIB': 'ifIndex'},
+                                              {'IF-MIB': 'ifName'},
+                                              {'IF-MIB': 'ifType'},
+                                              {'IF-MIB': 'ifAdminStatus'},
+                                              {'IF-MIB': 'ifOperStatus'},
+                                              {'IF-MIB': 'ifHCInOctets'},
+                                              {'IF-MIB': 'ifHCInUcastPkts'},
+                                              {'IF-MIB': 'ifHCInMulticastPkts'},
+                                              {'IF-MIB': 'ifHCInBroadcastPkts'},
+                                              {'IF-MIB': 'ifHCOutOctets'},
+                                              {'IF-MIB': 'ifHCOutUcastPkts'},
+                                              {'IF-MIB': 'ifHCOutMulticastPkts'},
+                                              {'IF-MIB': 'ifHCOutBroadcastPkts'},
+                                              {'IF-MIB': 'ifInDiscards'},
+                                              {'IF-MIB': 'ifInErrors'},
+                                              {'IF-MIB': 'ifInUnknownProtos'},
+                                              {'IF-MIB': 'ifOutDiscards'},
+                                              {'IF-MIB': 'ifOutErrors'}
+                                          ], self.construct_credentials(False, self.community_string))
+
+        for interface_entry in interface_entries:
+            # Iterate over list of interfaces
+
+            fields = {}  # Define a blank dictionary to hold the fields
+
+            # Store the hostname
+            fields['host'] = self.get_snmp_name(
+                self.host, self.community_string)
+
+            for key, value in interface_entry.items():
+                # Iterate over measurement fields
+                fields[self.get_brief_name(key)] = value
+
+            # Add the measurement to the list
+            interface_stat_list.append(fields)
+
+        return interface_stat_list  # Return out the gathered statistics
