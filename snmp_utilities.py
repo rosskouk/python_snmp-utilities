@@ -4,22 +4,19 @@
 # @copyright 2019-2020
 # @par License
 # MIT License
-# @date 18th April 2020
+# @date 29th April 2020
 # @details
 #
 # This module allows access to classes which provide SNMP
-# querying functionality using the pySNMP library.  Based
-# on code from https://www.ictshore.com/sdn/python-snmp-tutorial
+# querying functionality using the EasySNMP library.
 #
 # Required libraries:
-#   - re
-#   - pysnmp
-#       - https://github.com/etingof/pysnmp
+#   - easysnmp
+#       - https://github.com/fgimian/easysnmp
 #
 
-import re
 
-from pysnmp import hlapi
+from easysnmp import Session
 
 
 class SnmpQuery:
@@ -27,6 +24,65 @@ class SnmpQuery:
 
     @details This class provides methods to query SNMP devices
     """
+
+    def __init__(self, host, community_string, snmp_version):
+        """! @brief Constructor
+
+        @param host STRING - The name of the host to perform the SNMP query on
+        @param community_string STRING - The SNMP 1 / v2c community string
+        @param snmp_version INTEGER - The SNMP version to use 1, 2 or 3
+        @exception NotImplementedError Triggered if SNMP v3 is attempted
+        @details
+
+        SnmpQuery class constructor, stores parameters and instantiates a new
+        instance of EasySNMP Session.
+        """
+
+        if snmp_version == 1 or snmp_version == 2:
+            # Using SNMP version 1 or 2c
+
+            ## @var host
+            # @brief STRING - The hostname of the SNMP device
+            self.host = host
+
+            ## @var community_string
+            # @brief STRING - The SNMP community string set on the device
+            self.community_string = community_string
+
+            ## @var snmp
+            # @brief OBJECT - Instance of EasySNMP Session
+            self.snmp = Session(host, snmp_version, community_string)
+
+        if snmp_version == 3:
+            raise NotImplementedError
+
+    def bulkwalk(self, oids):
+        """! @brief Perform SNMP GETBULK operation
+
+        @param oid LIST - List of OIDs, or textual names to query
+        @return LIST of DICTIONARIES - Returns a list of dicts containing SNMP fields, one list entry per SNMP index entry
+        @details
+
+        Performs an SNMP GETBULK operation and passes the results to parse()
+        """
+
+        fetched_results = {}  # Blank dictionary to hold fields
+
+        for oid in oids:
+            # OIDS must be fed to bulkwalk one at a time
+
+            fields = self.snmp.bulkwalk(oid)
+
+            for field in fields:
+                if str(field.oid_index) not in fetched_results:
+                    fetched_results[str(field.oid_index)] = {
+                        str(field.oid): self.cast(field.value)
+                    }
+                else:
+                    fetched_results[str(field.oid_index)].update(
+                        {field.oid: self.cast(field.value)})
+
+        return self.parse(fetched_results)
 
     def cast(self, value):
         """! @brief Correctly set the type of the given variable
@@ -53,188 +109,66 @@ class SnmpQuery:
 
         return value
 
-    def construct_credentials(self, v3, credentials):
-        """! @brief Construct SNMP credentials
+    def get(self, oids):
+        """! @brief Perform SNMP GET operation
 
-        @param v3 BOOL - True of SNMP v3 is in use, False otherwise
-        @param credentials STRING|ARRAY - A community string or an array of SNMP v3 credential information
-        @return OBJECT - A CommunityData or UsmUserData object is returned
-        @exception NotImplementedError - Triggered if SNMP v3 is used
-        """
-
-        if(v3 is False):
-            community_string = hlapi.CommunityData(credentials)
-            return community_string
-        else:
-            raise NotImplementedError
-
-    def construct_object_types(self, list_of_oids):
-        """! @brief Construct a list of PySNMP ObjectType objects for use in an SNMP query
-
-        @param list_of_oids LIST - list of OIDs, or textual names to query
-        @return LIST - List of PySNMP ObjectType objects
-        @exception ValueError Triggered if an invalid textual SNMP value is provided
-        @details
-
-        Takes a list of OIDs or textual representations and creates PySNMP
-        ObjectType objects for them.  OIDs are string entries in the list, textual
-        representations are dictionary entries with the MIB as the key and field
-        as the value. Example:
-        @code
-        [
-            {'READYNASOS-MIB': 'fanRPM'},
-            '1.3.6.1.4.1.4526.22.4.1.2.1',
-            ...
-        ]
-        @endcode
-        """
-
-        object_types = []
-        for oid in list_of_oids:
-            if type(oid) is str:
-                #
-                # This is a regular OID
-                #
-                object_types.append(hlapi.ObjectType(
-                    hlapi.ObjectIdentity(oid)))
-            if type(oid) is dict:
-                #
-                # This is a MIB and textual name pair
-                #
-                for key, value in oid.items():
-                    if '.' in value:
-                        #
-                        # The textual name has a key attached, split it to create ObjectIdentity properly
-                        #
-                        split_value = value.split('.')
-                        if len(split_value) != 2:
-                            raise ValueError(
-                                'Error in construct_object_types(): Invalid SNMP value')
-
-                        object_types.append(hlapi.ObjectType(
-                            hlapi.ObjectIdentity(key, split_value[0], split_value[1]).addMibSource('./mibs')))
-                    else:
-                        object_types.append(hlapi.ObjectType(
-                            hlapi.ObjectIdentity(key, value).addMibSource('./mibs')))
-
-        return object_types
-
-    def fetch(self, handler):
-        """! @brief Loop over a handler and return queried values
-
-        @param handler - OBJECT Preconfigured snmp query object
-        @return LIST of DICTIONARIES - List of dictionaries containing the identifier and value of each query
-        @exception RuntimeError - Triggered when an SNMP error occurs
-        """
-
-        result = []
-        for (error_indication,
-                error_status,
-                error_index,
-                var_binds) in handler:
-            try:
-                if not error_indication and not error_status:
-                    items = {}
-                    for var_bind in var_binds:
-                        items[str(var_bind[0].prettyPrint())
-                              ] = self.cast(var_bind[1])
-                    result.append(items)
-                else:
-                    raise RuntimeError(
-                        'Got SNMP error: {0}'.format(error_indication))
-            except StopIteration:
-                break
-
-        return result
-
-    def get(self, target, oids, credentials, port=161, engine=hlapi.SnmpEngine(), context=hlapi.ContextData()):
-        """! @brief Get a single SNMP value
-
-        @param target STRING - The SNMP target
         @param oids LIST - OID, or textual name to query
-        @param credentials OBJECT - PySNMP CommunityData or UsmUserData object see below
-        @param port INTEGER - The SNMP port number
-        @param engine OBJECT - PySNMP SnmpEngine object
-        @param context OBJECT - PySNMP ContextData object
         @return DICTIONARY - Dictionary containing the result
         @details
 
-        Creates a handler which performs an SNMP get request and passes it to fetch().
-        The credentials parameter differs depending on which version of SNMP is
-        being used examples:
-        - SNMP v1 or v2c
-          - hlapi.CommunityData('public')
-        - SNMP v3
-          - hlapi.UsmUserData('testuser', authKey='authenticationkey', privKey='encryptionkey',
-                              authProtocol=hlapi.usmHMACSHAAuthProtocol, privProtocol=hlapi.usmAesCfb128Protocol)
+        Performs an SNMP GET operation and passes the result to parse().
+
+        The variable results will contain a list of SNMPVariable objects
+        if multiple OIDs were passed.  In this case the method will generate
+        a nested dictionary with the OID index as key and a dictionary containing
+        each OID and OID value as the dictionary value.
+
+        The variable results will contain a single SNMPVariable object if a
+        single OID was passed.  In this case the method will generate a single
+        dictionary with the OID and OID value pair
         """
 
-        handler = hlapi.getCmd(
-            engine,
-            credentials,
-            hlapi.UdpTransportTarget((target, port)),
-            context,
-            # Asterisk automatically expands list of objects
-            *self.construct_object_types(oids),
-            lexicographicMode=False
-        )
+        results = self.snmp.get(oids)
 
-        return self.fetch(handler)
+        fetched_results = {}  # Define blank dictionary to hold results
 
-    def get_brief_name(self, full_name):
-        """! @brief Return the brief textual name of an SNMP OID
+        if type(results) is list:
+            # Multiple OIDs were returned
 
-        @param full_name STRING The full textual name
-        @return STRING - String containing the brief name
-        @details
+            for result in results:
+                if str(result.oid_index) not in fetched_results:
+                    fetched_results[str(result.oid_index)] = {
+                        str(result.oid): self.cast(result.value)
+                    }
+                else:
+                    fetched_results[str(result.oid_index)].update(
+                        {result.oid: self.cast(result.value)})
+        else:
+            # A single OID was returned
+            fetched_results = {
+                results.oid: self.cast(results.value)
+            }
 
-        Accepts a full textual SNMP OID name as generated
-        by pySNMP's prettyPrint() method, example:
+        return self.parse(fetched_results)
 
-        READYNASOS-MIB::ataError.3
+    def parse(self, snmp_results):
+        """! @brief Parse SNMP results
 
-        will return ataError
+        @param snmp_results DICTIONARY - Either a single key / value pair or a Dict of dicts containing returned SNMP fields organised by Field index
+        @return LIST of DICTIONARIES Returns a list of dicts containing SNMP fields, one list entry per SNMP index entry
+        @return DICTIONARY Returns a dictionary if only a single result is passed in snmp_results
         """
 
-        brief_name = re.search('(?<=::)(.*?)(?=\.)', full_name)
+        # Process the results into a list of dictionaries
+        result_list = []
 
-        if type(brief_name.group()) is not str:
-            raise ValueError(
-                'The string passed to get_brief_name was not in the correct format')
+        if len(snmp_results) == 1:
+            return snmp_results
 
-        return brief_name.group()
+        for index, stats_list in snmp_results.items():
+            result_list.append(stats_list)
 
-    def get_next(self, target, oids, credentials, port=161, engine=hlapi.SnmpEngine(), context=hlapi.ContextData()):
-        """! @brief Get a single SNMP value
-
-        @param target STRING - The SNMP target
-        @param oids LIST - OIDs, or textual names to query
-        @param credentials OBJECT - PySNMP CommunityData or UsmUserData object see below
-        @param port INTEGER - The SNMP port number
-        @param engine OBJECT - PySNMP SnmpEngine object
-        @param context OBJECT - PySNMP ContextData object
-        @return DICTIONARY - Dictionary containing the result
-        @details
-
-        Creates a handler which performs an SNMP get request and passes it to fetch(). The credentials parameter differs depending on
-        which version of SNMP is being used, examples:
-        - SNMP v1 or v2c
-          - hlapi.CommunityData('public')
-        - SNMP v3
-          - hlapi.UsmUserData('testuser', authKey='authenticationkey', privKey='encryptionkey',
-                              authProtocol=hlapi.usmHMACSHAAuthProtocol, privProtocol=hlapi.usmAesCfb128Protocol)
-        """
-
-        handler = hlapi.nextCmd(
-            engine,
-            credentials,
-            hlapi.UdpTransportTarget((target, port)),
-            context,
-            *self.construct_object_types(oids),
-            lexicographicMode=False
-        )
-
-        return self.fetch(handler)
+        return result_list
 
 
 class SnmpUtility(SnmpQuery):
@@ -246,23 +180,16 @@ class SnmpUtility(SnmpQuery):
     from SNMP enabled devices.
     """
 
-    def __init__(self, host, community_string):
+    def __init__(self, *args):
         """! @brief Constructor
 
-        @param host STRING - The hostname of the SNMP device
-        @param community_string STRING - The SNMP community string set on the device
+        @param args TUPLE - Arguments to pass to the parent constructor, hostname and community string
         @details
 
-        Sets required parameters
+        Passes the SNMP device hostname and community string to the parent constructor
         """
 
-        ## @var host
-        # @brief STRING - The hostname of the SNMP device
-        self.host = host
-
-        ## @var community_string
-        # @brief STRING - The SNMP community string set on the device
-        self.community_string = community_string
+        super().__init__(*args)
 
     def get_snmp_interfaces(self):
         """! @brief Get interface statistics via SNMP
@@ -294,56 +221,37 @@ class SnmpUtility(SnmpQuery):
         The information is returned as a list of dictionaries
         """
 
-        interface_stat_list = []  # Blank list to hold dictionaries of interface statistics
+        oids = [
+            'IF-MIB::ifIndex',
+            'IF-MIB::ifName',
+            'IF-MIB::ifType',
+            'IF-MIB::ifAdminStatus',
+            'IF-MIB::ifOperStatus',
+            'IF-MIB::ifHCInOctets',
+            'IF-MIB::ifHCInUcastPkts',
+            'IF-MIB::ifHCInMulticastPkts',
+            'IF-MIB::ifHCInBroadcastPkts',
+            'IF-MIB::ifHCOutOctets',
+            'IF-MIB::ifHCOutUcastPkts',
+            'IF-MIB::ifHCOutMulticastPkts',
+            'IF-MIB::ifHCOutBroadcastPkts',
+            'IF-MIB::ifInDiscards',
+            'IF-MIB::ifInErrors',
+            'IF-MIB::ifInUnknownProtos',
+            'IF-MIB::ifOutDiscards',
+            'IF-MIB::ifOutErrors'
+        ]
 
-        interface_entries = self.get_next(self.host,
-                                          [
-                                              {'IF-MIB': 'ifIndex'},
-                                              {'IF-MIB': 'ifName'},
-                                              {'IF-MIB': 'ifType'},
-                                              {'IF-MIB': 'ifAdminStatus'},
-                                              {'IF-MIB': 'ifOperStatus'},
-                                              {'IF-MIB': 'ifHCInOctets'},
-                                              {'IF-MIB': 'ifHCInUcastPkts'},
-                                              {'IF-MIB': 'ifHCInMulticastPkts'},
-                                              {'IF-MIB': 'ifHCInBroadcastPkts'},
-                                              {'IF-MIB': 'ifHCOutOctets'},
-                                              {'IF-MIB': 'ifHCOutUcastPkts'},
-                                              {'IF-MIB': 'ifHCOutMulticastPkts'},
-                                              {'IF-MIB': 'ifHCOutBroadcastPkts'},
-                                              {'IF-MIB': 'ifInDiscards'},
-                                              {'IF-MIB': 'ifInErrors'},
-                                              {'IF-MIB': 'ifInUnknownProtos'},
-                                              {'IF-MIB': 'ifOutDiscards'},
-                                              {'IF-MIB': 'ifOutErrors'}
-                                          ], self.construct_credentials(False, self.community_string))
+        interface_stats = self.bulkwalk(oids)
 
-        for interface_entry in interface_entries:
-            # Iterate over list of interfaces
-
-            fields = {}  # Define a blank dictionary to hold the fields
-
-            # Store the hostname
-            fields['host'] = self.get_snmp_name()
-
-            for key, value in interface_entry.items():
-                # Iterate over measurement fields
-                fields[self.get_brief_name(key)] = value
-
-            # Add the measurement to the list
-            interface_stat_list.append(fields)
-
-        return interface_stat_list  # Return out the gathered statistics
+        return interface_stats  # Return out the gathered statistics
 
     def get_snmp_name(self):
         """! @brief Get the name of an SNMP device
 
-        @return STRING - The name of the device as defined by SNMPv2-MIB::sysName.0
+        @return DICTIONARY - Dictionary containing the value of SNMPv2-MIB::sysName.0
         """
 
-        host_name = self.get(self.host,
-                             [
-                                 {'SNMPv2-MIB': 'sysName.0'}
-                             ], self.construct_credentials(False, self.community_string))
+        host_name = self.get('SNMPv2-MIB::sysName.0')
 
-        return host_name[0]['SNMPv2-MIB::sysName.0']
+        return host_name
