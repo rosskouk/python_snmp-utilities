@@ -1,21 +1,37 @@
+v1.0.3
+======
+  - d75ed5e Merge pull request #7 from rosskouk/bugfix-switch-to-easysnmp
+    - 1a927d5 
+      - Updated README.md 
+      - Resolves #6
+    - e172ab7 
+      - Migrated SnmpQuery class to use EasySNMP library instead of pySNMP
+    - 543f818 
+      - Switched library from pySNMP to EasySNMP
+    
 v1.0.2
-======  
-  - 0ca459e 
-    - Updated README.md
-  - 35fd939 
-    - Updated documentation in snmp_utilities.py 
-    - Reordered methods in file
-  - 899359c 
-    - Removed e-mail address from LICENSE
-  - 41513d7 
-    - Updated .gitignore
-  - 79d00be 
-    - Added SnmpUtility to __init__.py
-  - 96101fc 
-    - Added class SnmpUtility 
-    - Added SnmpUtility::__init__() method 
-    - Moved methods get_snmp_name() and get_snmp_interfaces() to SnmpUtility
-  - 2e24117 - Minor documentation change
+======
+  - d1e6276 (tag: v1.0.2) Merge pull request #5 from rosskouk/feature-interface-checks
+    - 1e027e8 - Removed e-mail from LICENSE
+
+  - accbb5e Merge pull request #4 from rosskouk/feature-interface-checks
+    - a43c4bc - Added CHANGELOG  
+    - 0ca459e 
+      - Updated README.md
+    - 35fd939 
+      - Updated documentation in snmp_utilities.py 
+      - Reordered methods in file
+    - 899359c 
+      - Removed e-mail address from LICENSE
+    - 41513d7 
+      - Updated .gitignore
+    - 79d00be 
+      - Added SnmpUtility to __init__.py
+    - 96101fc 
+      - Added class SnmpUtility 
+      - Added SnmpUtility::__init__() method 
+      - Moved methods get_snmp_name() and get_snmp_interfaces() to SnmpUtility
+    - 2e24117 - Minor documentation change
 
 v1.0.1
 ======
