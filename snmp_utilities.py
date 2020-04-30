@@ -249,7 +249,7 @@ class SnmpUtility(SnmpQuery):
     def get_snmp_name(self):
         """! @brief Get the name of an SNMP device
 
-        @return STRING - The name of the device as defined by SNMPv2-MIB::sysName.0
+        @return DICTIONARY - Dictionary containing the value of SNMPv2-MIB::sysName.0
         """
 
         host_name = self.get('SNMPv2-MIB::sysName.0')
