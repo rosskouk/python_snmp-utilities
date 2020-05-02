@@ -1,5 +1,15 @@
+v1.0.4
+======
+  - 1c8cf30 Merge pull request #8 from rosskouk/feature-uptime
+    - 2ae24c5 
+      - Updated snmp_utilities.py   
+        - Corrected Doxygen parameter name   
+        - Added method SnmpUtility::get_snmp_uptime()
+
 v1.0.3
 ======
+  - 3a8657f (tag: v1.0.3) 
+    - Updated CHANGELOG
   - d75ed5e Merge pull request #7 from rosskouk/bugfix-switch-to-easysnmp
     - 1a927d5 
       - Updated README.md 
