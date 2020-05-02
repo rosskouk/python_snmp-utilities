@@ -59,7 +59,7 @@ class SnmpQuery:
     def bulkwalk(self, oids):
         """! @brief Perform SNMP GETBULK operation
 
-        @param oid LIST - List of OIDs, or textual names to query
+        @param oids LIST - List of OIDs, or textual names to query
         @return LIST of DICTIONARIES - Returns a list of dicts containing SNMP fields, one list entry per SNMP index entry
         @details
 
@@ -255,3 +255,13 @@ class SnmpUtility(SnmpQuery):
         host_name = self.get('SNMPv2-MIB::sysName.0')
 
         return host_name
+
+    def get_snmp_uptime(self):
+        """! @brief Get the uptime from an SNMP enabled device
+
+        @return DICTIONARY - Dictionary containing the value of DISMAN-EVENT-MIB::sysUpTimeInstance
+        """
+
+        host_uptime = self.get('DISMAN-EVENT-MIB::sysUpTimeInstance')
+
+        return host_uptime
